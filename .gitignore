@@ -1,0 +1,8 @@
+# Ignore the vagrant status directory
+/.vagrant/
+
+# Ignore ansible retry files
+ansible/*.retry
+
+# Ignore log files
+*.log

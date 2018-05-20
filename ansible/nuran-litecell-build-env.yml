@@ -1,0 +1,71 @@
+---
+
+- name: Set up a yocto build environment for the nuran litecell on a local virtual machine
+  hosts: yocto
+
+  tasks:
+    - name: Install utilities for terminal interaction
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - curl
+          - fish
+          - tmux
+          - python3-dev
+          - emacs-nox
+          - vim
+
+    - name: Install development dependencies listed by Nuran
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - git-core
+          - libsdl1.2-dev
+          - gawk
+          - chrpath
+          - texinfo
+
+    - name: Install other development dependencies
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - python2.7-dev # TODO(matt9j) required by google repo https://groups.google.com/forum/#!topic/repo-discuss/MVOoA4WGYig
+          - diffstat # Required by bitbake and not installed in ubuntu server by default
+
+    - name: Map system python to python2.7
+      # Required by google repo, unfortunately.
+      become: yes
+      file:
+        src: /usr/bin/python2.7
+        path: /usr/bin/python
+        state: link
+
+    - name: Copy environment configuration files
+      become: yes
+      copy:
+        src: files/litecell-dev-environment.sh
+        dest: /etc/profile.d/
+        force: yes
+        mode: "u=rwx,g=rx,o=rx"
+      register:
+        profile_environment
+
+    - name: Reload environment when required
+      when: profile_environment.changed
+      shell: ". /etc/profile.d/litecell-dev-environment.sh"
+
+    - name: Make google repo download directory
+      file: state=directory path=/home/vagrant/lc15dev/bin
+
+    - name: Download google repo
+      get_url:
+        dest: /home/vagrant/lc15dev/bin/repo
+        url: https://storage.googleapis.com/git-repo-downloads/repo
+        force: no
+        mode: "u+rwx"
+
+    - name: Copy the user git config into the vm
+      copy:
+        src: "~/.gitconfig"
+        dest: "~/.gitconfig"
+
